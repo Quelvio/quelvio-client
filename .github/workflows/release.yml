@@ -1,0 +1,72 @@
+# Release: a tag vX.Y.Z builds the package once and publishes it to PyPI as `quelvio`, by trusted publishing
+# (OIDC, environment pypi), so no token exists anywhere. Each release tag is pushed by the owner after review.
+# Every action is pinned by its commit, and the build's tools by their hashes (.github/build-requirements.txt).
+# The build job can't publish; the publish job runs none of the repository's code.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: The tag is the package's version
+        run: |
+          python - <<'PY'
+          import os, sys, tomllib
+          version = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+          if os.environ["GITHUB_REF_NAME"] != f"v{version}":
+              sys.exit(f"the tag {os.environ['GITHUB_REF_NAME']} isn't v{version}")
+          PY
+      - name: Build once, from the hashed tools alone, to the same bytes each time
+        run: |
+          umask 022
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          python -m pip install --disable-pip-version-check --require-hashes --no-deps --only-binary :all: -r .github/build-requirements.txt
+          python -m build --sdist --wheel --no-isolation --outdir dist/
+          python tools/normalize_sdist.py "dist/quelvio-${GITHUB_REF_NAME#v}.tar.gz"
+      - name: The wheel's own check, offline, before anything is kept
+        run: python tests/smoke.py "dist/quelvio-${GITHUB_REF_NAME#v}-py3-none-any.whl"
+      - name: The files' sha256, in the run's summary
+        run: |
+          mkdir sums
+          (cd dist && sha256sum -- *) > sums/SHA256SUMS
+          cat sums/SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: sums
+          path: sums/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
+        with:
+          packages-dir: dist/

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "about": "A memory's subjects (the table of classes, Matching names, Subjects). Shared by the client and the server. Only the trigger words of the risky classes, from the table of classes, matched as whole tokens, and the class verbs, matched by stem; no path, branch or remote pattern. A trigger is one or more tokens: a word is matched in any case, a flag (a token starting with '-') exactly as written. A class verb matches its stem's forms: s, es, ed and ing after a plain verb; s and d after one ending in e, and ing with that e dropped (so pushd and writs are not forms). Read verbs are for the client's action parser: a tool whose name's verb is one is in no class.",
+  "classes": {
+    "push": {"triggers": ["git push", "gh pr merge", "push", "merge"], "verbs": ["push"]},
+    "delete": {"triggers": ["rm", "rmdir", "git clean", "git reset --hard", "git branch -D", "drop table", "drop database", "truncate",
+                            "kubectl delete", "terraform destroy", "git push --delete", "delete"], "verbs": ["delete"]},
+    "deploy": {"triggers": ["deploy", "kubectl apply", "kubectl delete", "terraform apply", "terraform destroy", "vercel --prod", "fly deploy",
+                            "docker push", "npm publish", "twine upload", "publish"], "verbs": ["deploy", "publish"]},
+    "write_outside": {"triggers": ["write", "edit"], "verbs": ["write"]},
+    "send": {"triggers": ["send", "post", "reply", "comment", "message", "email"], "verbs": ["send"]}
+  },
+  "read_verbs": ["get", "list", "read", "search", "fetch"],
+  "stem_endings": {"plain": ["s", "es", "ed", "ing"], "final_e": ["s", "d"], "final_e_dropped": ["ing"]}
+}

@@ -1,0 +1,253 @@
+{
+  "about": "The MCP server's contract: the one server 'quelvio', its tools with their titles, hints and inputs, and the sentences a tool returns on a failure.",
+  "server": {
+    "name": "quelvio",
+    "addresses": {
+      "hosted": "https://mcp.quelvio.com/http",
+      "beside_the_routes": "{QUELVIO_URL}/mcp"
+    },
+    "protocol_versions": ["2026-07-28", "2025-11-25", "2025-06-18"],
+    "resource_metadata": "https://mcp.quelvio.com/.well-known/oauth-protected-resource/http"
+  },
+  "tools": [
+    {
+      "name": "memory_start",
+      "product": "memory",
+      "title": "Start this session's memory",
+      "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false, "idempotentHint": false},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["prompt"],
+        "properties": {
+          "prompt": {"type": "string", "description": "The person's prompt, word for word."},
+          "project": {"type": "string", "description": "The project, for an agent that reaches Quelvio only through MCP. An agent's default project comes from its first session, so its first memory_start must send it; later ones may leave it out for the default. With no project and no default yet, the call is refused on project."},
+          "parent": {"type": "string", "description": "The parent session's id, if there is one."},
+          "session_id": {"type": "string", "description": "The session id Quelvio gave, on every call after the first."},
+          "people": {"type": "array", "items": {"type": "string", "maxLength": 254}, "description": "The email addresses of everyone who can read your replies, your own account left out, the whole list each time; leave it out when the person is alone. A client sends at most 50; a longer list counts as a group with a guest and is never refused."}
+        }
+      }
+    },
+    {
+      "name": "memory_recall",
+      "product": "memory",
+      "title": "Recall memories",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": {"type": "string", "description": "What to recall."},
+          "step": {"type": "string", "description": "What you are about to do."},
+          "session_id": {"type": "string", "description": "The session id."},
+          "people": {"type": "array", "items": {"type": "string", "maxLength": 254}, "description": "The email addresses of everyone who can read your replies, your own account left out, the whole list each time; leave it out when the person is alone. A client sends at most 50; a longer list counts as a group with a guest and is never refused."}
+        }
+      }
+    },
+    {
+      "name": "memory_save_turn",
+      "product": "memory",
+      "title": "Save a turn",
+      "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false, "idempotentHint": false},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id", "kind", "speaker", "text"],
+        "properties": {
+          "session_id": {"type": "string", "description": "The session id."},
+          "kind": {"type": "string", "enum": ["prompt", "reply"], "description": "A prompt or a reply."},
+          "speaker": {"type": "string", "enum": ["person", "agent"], "description": "Who said it."},
+          "text": {"type": "string", "description": "The words, as they were said."},
+          "reply_to": {"type": "string", "description": "For a reply: the id of the prompt it answers."},
+          "from": {"type": "string", "maxLength": 254, "description": "In a group, the email address of the person whose message this is: one of this call's people, or the key's person."},
+          "people": {"type": "array", "items": {"type": "string", "maxLength": 254}, "description": "The email addresses of everyone who can read your replies, your own account left out, the whole list each time; leave it out when the person is alone. A client sends at most 50; a longer list counts as a group with a guest and is never refused."}
+        }
+      }
+    },
+    {
+      "name": "memory_end",
+      "product": "memory",
+      "title": "End the session",
+      "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id"],
+        "properties": {
+          "session_id": {"type": "string", "description": "The session id."}
+        }
+      }
+    },
+    {
+      "name": "memory_trace",
+      "product": "memory",
+      "title": "Trace a memory",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id", "memory"],
+        "properties": {
+          "session_id": {"type": "string", "description": "The session id."},
+          "memory": {"type": "string", "description": "The reference at the end of a memory's label, such as #k3x9vq, or the memory's id."},
+          "from": {"type": "integer", "minimum": 1, "description": "The line to start at; 1 when left out."}
+        }
+      }
+    },
+    {
+      "name": "memory_handoff",
+      "product": "memory",
+      "title": "Hand this work to a colleague",
+      "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id", "to"],
+        "properties": {
+          "session_id": {"type": "string", "description": "The session id."},
+          "to": {"type": "string", "maxLength": 254, "description": "The colleague's email address, a person of the organisation. They get a copy of where this work stopped and its setup facts; the person keeps theirs."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_scope",
+      "product": "knowledge",
+      "title": "See what Quelvio may read",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_ask",
+      "product": "knowledge",
+      "title": "Ask the sources",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question"],
+        "properties": {
+          "question": {"type": "string", "maxLength": 2000, "description": "The question, in full."},
+          "repositories": {"type": "array", "items": {"type": "string"}, "maxItems": 20, "description": "The repositories to read, by id; every one you may read when left out."},
+          "as_of": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "A date, YYYY-MM-DD, not after today."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."},
+          "request_id": {"type": "string", "maxLength": 64, "description": "Your id for this call: a call repeated with it within 24 hours returns the first answer."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_search",
+      "product": "knowledge",
+      "title": "Search the sources",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": {"type": "string", "maxLength": 2000, "description": "What to search for."},
+          "repositories": {"type": "array", "items": {"type": "string"}, "maxItems": 20, "description": "The repositories to read, by id; every one you may read when left out."},
+          "as_of": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "A date, YYYY-MM-DD, not after today."},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 40, "description": "At most this many passages; 10 when left out."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."},
+          "request_id": {"type": "string", "maxLength": 64, "description": "Your id for this call: a call repeated with it within 24 hours returns the first answer."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_open",
+      "product": "knowledge",
+      "title": "Open a passage",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "passage": {"type": "string", "description": "A passage id. Give this, or document."},
+          "document": {"type": "string", "description": "A document id, with section, or alone for the whole document."},
+          "section": {"type": "array", "items": {"type": "string"}, "maxItems": 10, "description": "A heading path within the document."},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "At most this many passages; 50 when left out."},
+          "cursor": {"type": "string", "description": "The cursor from the previous answer, for the next page."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_changes",
+      "product": "knowledge",
+      "title": "List what changed",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["since"],
+        "properties": {
+          "since": {"type": "string", "description": "A date-time, not in the future."},
+          "repositories": {"type": "array", "items": {"type": "string"}, "maxItems": 20, "description": "The repositories to read, by id; every one you may read when left out."},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "At most this many changes; 50 when left out."},
+          "cursor": {"type": "string", "description": "The cursor from the previous answer, for the next page."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."},
+          "request_id": {"type": "string", "maxLength": 64, "description": "Your id for this call: a call repeated with it within 24 hours returns the first answer."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_propose",
+      "product": "knowledge",
+      "title": "Propose a correction",
+      "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false, "idempotentHint": false},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["passage", "text", "reason"],
+        "properties": {
+          "passage": {"type": "string", "description": "The passage id to correct."},
+          "text": {"type": "string", "maxLength": 8000, "description": "The right words."},
+          "reason": {"type": "string", "maxLength": 1000, "description": "Why the passage is wrong."},
+          "request_id": {"type": "string", "maxLength": 64, "description": "Your id for this call: a call repeated with it within 24 hours returns the first answer."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."}
+        }
+      }
+    },
+    {
+      "name": "knowledge_trace",
+      "product": "knowledge",
+      "title": "Trace an answer",
+      "annotations": {"readOnlyHint": true, "destructiveHint": false, "openWorldHint": false, "idempotentHint": true},
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["answer"],
+        "properties": {
+          "answer": {"type": "string", "description": "The answer id."},
+          "from": {"type": "integer", "minimum": 1, "description": "The line to start at; 1 when left out."},
+          "session_id": {"type": "string", "description": "The Quelvio session id, as SessionStart or memory_start gave it."}
+        }
+      }
+    }
+  ],
+  "sentences": {
+    "off": "Memory and Knowledge are off for this organisation.",
+    "memory": {
+      "unavailable": "Quelvio memory is not available right now. Go on without it.",
+      "plan_ended": "Quelvio's plan has ended. Memory is paused.",
+      "refused": "Quelvio refused this key or agent name",
+      "upgrade": "Update the Quelvio client",
+      "too_many_calls": "Too many calls to Quelvio just now. Wait a second, then ask again."
+    },
+    "knowledge": {
+      "unavailable": "Quelvio Knowledge is not available right now. Go on without it, and say that you could not check the sources.",
+      "plan_ended": "Quelvio's plan has ended. Knowledge is paused.",
+      "plan_limit": "Quelvio's plan limit is reached. Knowledge is paused.",
+      "refused": "Quelvio refused this key or agent name",
+      "upgrade": "Update the Quelvio client",
+      "too_many_calls": "Too many calls to Quelvio just now. Wait a second, then ask again."
+    }
+  }
+}

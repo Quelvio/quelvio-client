@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quelvio"
+version = "2.0.0"
+description = "Quelvio's agent memory client: Claude Code's hooks and the MCP server, run on your machine."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+quelvio = "quelvio.client.cli:entry"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+quelvio = ["contract/*.json", "text/patterns/*.json"]
